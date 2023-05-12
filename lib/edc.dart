@@ -1,14 +1,23 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class Edc {
   static const _methodChannel = MethodChannel("edc");
   static const _eventChannel = EventChannel("edc.eventChannel");
   Completer<dynamic>? _responseCompleter;
-
-  void Function()? callPrint() {
+  bool _isBusy = false;
+  void Function()? callPrint(BuildContext context) {
     return () async {
+      if (_isBusy) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Please wait..."),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+      _isBusy = true;
       await _methodChannel.invokeMethod("callPrint", {
         "data_print": EdcPrintPayloadModel(
                 namaFitur: "Kartu Kredit Non BNI - Kartu Kredit Mega",
@@ -20,11 +29,20 @@ class Edc {
                 }).toList())
             .toEncode()
       });
+      _isBusy = false;
     };
   }
 
-  void Function()? callHost() {
+  void Function()? callHost(BuildContext context) {
     return () async {
+      if (_isBusy) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Please wait..."),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+      _isBusy = true;
       await _methodChannel.invokeMethod(
           "callHost", {'path': "plnInquiry", 'data': dummyCallHost});
       _responseCompleter = Completer<dynamic>();
@@ -32,11 +50,13 @@ class Edc {
         if (_responseCompleter != null && !_responseCompleter!.isCompleted) {
           _responseCompleter?.complete(event);
           _responseCompleter = null;
+          _isBusy = false;
         }
       }, onError: (error) {
         if (_responseCompleter != null && !_responseCompleter!.isCompleted) {
           _responseCompleter?.completeError(error);
           _responseCompleter = null;
+          _isBusy = false;
         }
       });
     };
